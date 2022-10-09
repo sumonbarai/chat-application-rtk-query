@@ -1,7 +1,7 @@
 import { apiSlice } from "../api/apiSlice";
 import { userLoggedIn } from "./authSlice";
 
-export const authSlice = apiSlice.injectEndpoints({
+export const authApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // register api
     register: builder.mutation({
@@ -11,22 +11,26 @@ export const authSlice = apiSlice.injectEndpoints({
         body: data,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
-        const result = await queryFulfilled;
-        // save register user data in localStorage
-        localStorage.setItem(
-          "auth",
-          JSON.stringify({
-            accessToken: result.data.accessToken,
-            user: result.data.user,
-          })
-        );
-        // save register user data in authSlice
-        dispatch(
-          userLoggedIn({
-            accessToken: result.data.accessToken,
-            user: result.data.user,
-          })
-        );
+        try {
+          const result = await queryFulfilled;
+          // save register user data in localStorage
+          localStorage.setItem(
+            "auth",
+            JSON.stringify({
+              accessToken: result.data.accessToken,
+              user: result.data.user,
+            })
+          );
+          // save register user data in authSlice
+          dispatch(
+            userLoggedIn({
+              accessToken: result.data.accessToken,
+              user: result.data.user,
+            })
+          );
+        } catch (error) {
+          // not handle error
+        }
       },
     }),
     // login api
@@ -37,23 +41,27 @@ export const authSlice = apiSlice.injectEndpoints({
         body: data,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
-        const result = await queryFulfilled;
-        localStorage.setItem(
-          "auth",
-          JSON.stringify({
-            accessToken: result.data.accessToken,
-            user: result.data.user,
-          })
-        );
-        dispatch(
-          userLoggedIn({
-            accessToken: result.data.accessToken,
-            user: result.data.user,
-          })
-        );
+        try {
+          const result = await queryFulfilled;
+          localStorage.setItem(
+            "auth",
+            JSON.stringify({
+              accessToken: result.data.accessToken,
+              user: result.data.user,
+            })
+          );
+          dispatch(
+            userLoggedIn({
+              accessToken: result.data.accessToken,
+              user: result.data.user,
+            })
+          );
+        } catch (error) {
+          // not handle error
+        }
       },
     }),
   }),
 });
 
-export const { useRegisterMutation, useLoggedInMutation } = authSlice;
+export const { useRegisterMutation, useLoggedInMutation } = authApi;
