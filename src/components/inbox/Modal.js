@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { conversationsApi } from "../../features/conversations/conversationsApi";
 import { useGetUserQuery } from "../../features/users/usersApi";
 import validEmail from "../../utils/validEmail";
 import Error from "../ui/Error";
@@ -10,9 +11,11 @@ export default function Modal({ open, control }) {
   const [to, setTo] = useState("");
   const [message, setMessage] = useState("");
   const [userCheck, setUserChecked] = useState(false);
+  const [conversation, setConversation] = useState(undefined);
   const { data: participant } = useGetUserQuery(to, {
     skip: !userCheck,
   });
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const timeOut = setTimeout(() => {
@@ -26,7 +29,20 @@ export default function Modal({ open, control }) {
             participant[0].email !== loggedInUserEmail
           ) {
             const participantEmail = participant[0].email;
-            console.log(participantEmail);
+
+            dispatch(
+              conversationsApi.endpoints.getConversation.initiate({
+                loggedInUserEmail: loggedInUserEmail,
+                partnerEmail: participantEmail,
+              })
+            )
+              .unwrap()
+              .then((data) => {
+                setConversation(data);
+              })
+              .catch((err) => {
+                console.log(err);
+              });
           }
         }
       }
@@ -34,7 +50,19 @@ export default function Modal({ open, control }) {
     return () => {
       clearTimeout(timeOut);
     };
-  }, [to, participant, loggedInUserEmail]);
+  }, [to, participant, loggedInUserEmail, dispatch]);
+
+  useEffect(() => {
+    if (conversation?.length > 0) {
+      console.log(conversation);
+    } else if (conversation?.length === 0) {
+      console.log("no converstaion found");
+    }
+  }, [conversation]);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("clicked");
+  };
 
   return (
     open && (
@@ -47,7 +75,7 @@ export default function Modal({ open, control }) {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Send message
           </h2>
-          <form className="mt-8 space-y-6" action="#" method="POST">
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <input type="hidden" name="remember" value="true" />
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
@@ -86,6 +114,7 @@ export default function Modal({ open, control }) {
               <button
                 type="submit"
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
+                disabled={conversation === undefined}
               >
                 Send Message
               </button>
@@ -96,7 +125,7 @@ export default function Modal({ open, control }) {
             )}
             {participant?.length > 0 &&
               participant[0].email === loggedInUserEmail && (
-                <Error message="You can't message this Email address bcz thi is logged user email" />
+                <Error message="You can't send message to your self" />
               )}
           </form>
         </div>
