@@ -1,12 +1,18 @@
 import { useEffect } from "react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { conversationsApi } from "../../features/conversations/conversationsApi";
+import {
+  conversationsApi,
+  useAddConversationMutation,
+  useEditConversationMutation,
+} from "../../features/conversations/conversationsApi";
+
 import { useGetUserQuery } from "../../features/users/usersApi";
 import validEmail from "../../utils/validEmail";
 import Error from "../ui/Error";
 
 export default function Modal({ open, control }) {
+  const { user: loggedInUserInformation } = useSelector((state) => state.auth);
   const { email: loggedInUserEmail } = useSelector((state) => state.auth.user);
   const [to, setTo] = useState("");
   const [message, setMessage] = useState("");
@@ -15,6 +21,11 @@ export default function Modal({ open, control }) {
   const { data: participant } = useGetUserQuery(to, {
     skip: !userCheck,
   });
+  const [addConversation, { isSuccess: AddConversationSuccess }] =
+    useAddConversationMutation();
+  const [editConversation, { isSuccess: EditConversationSuccess }] =
+    useEditConversationMutation();
+
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -52,18 +63,45 @@ export default function Modal({ open, control }) {
     };
   }, [to, participant, loggedInUserEmail, dispatch]);
 
-  useEffect(() => {
-    if (conversation?.length > 0) {
-      console.log(conversation);
-    } else if (conversation?.length === 0) {
-      console.log("no converstaion found");
-    }
-  }, [conversation]);
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("clicked");
+    if (conversation?.length > 0) {
+      const data = {
+        message: message,
+        timestamp: new Date().getTime(),
+      };
+      editConversation({
+        id: conversation[0].id,
+        data: data,
+        senderEmail: loggedInUserEmail,
+      });
+    } else if (conversation?.length === 0) {
+      const data = {
+        participants: `${loggedInUserInformation.email}-${participant[0].email}`,
+        users: [
+          {
+            email: `${loggedInUserInformation.email}`,
+            name: `${loggedInUserInformation.name}`,
+            id: `${loggedInUserInformation.id}`,
+          },
+          {
+            email: `${participant[0].email}`,
+            name: `${participant[0].name}`,
+            id: `${participant[0].id}`,
+          },
+        ],
+        message: message,
+        timestamp: new Date().getTime(),
+      };
+      addConversation(data);
+    }
   };
-
+  useEffect(() => {
+    if (AddConversationSuccess || EditConversationSuccess) {
+      control();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [EditConversationSuccess, AddConversationSuccess]);
   return (
     open && (
       <>
@@ -113,7 +151,11 @@ export default function Modal({ open, control }) {
             <div>
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
+                className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 ${
+                  conversation === undefined
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
                 disabled={conversation === undefined}
               >
                 Send Message

@@ -15,7 +15,6 @@ export default function Messages({ message }) {
             const { id, message, sender } = mess;
             const justify =
               sender.email !== loggedInUserEmail ? "start" : "end";
-            console.log(mess);
             return <Message key={id} justify={justify} message={message} />;
           })}
       </ul>
