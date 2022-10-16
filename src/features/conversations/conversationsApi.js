@@ -10,15 +10,38 @@ export const conversationsApi = apiSlice.injectEndpoints({
     }),
     getConversation: builder.query({
       query: ({ loggedInUserEmail, partnerEmail }) => ({
-        url: `/conversations?participants_like=${loggedInUserEmail}-${partnerEmail}&${partnerEmail}-${loggedInUserEmail}`,
+        url: `/conversations?participants_like=${loggedInUserEmail}-${partnerEmail}&&participants_like=${partnerEmail}-${loggedInUserEmail}`,
       }),
     }),
     addConversation: builder.mutation({
-      query: (data) => ({
+      query: ({ data, senderEmail }) => ({
         url: `/conversations`,
         method: "POST",
         body: data,
       }),
+      // silent update to message table
+      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+        try {
+          const result = await queryFulfilled;
+          if (result?.data?.id) {
+            const updatedMessage = {
+              conversationId: result.data.id,
+              sender: result.data.users.find(
+                (f) => f.email === arg.senderEmail
+              ),
+              receiver: result.data.users.find(
+                (f) => f.email !== arg.senderEmail
+              ),
+              message: result.data.message,
+              timestamp: result.data.timestamp,
+            };
+
+            dispatch(messagesApi.endpoints.addMessage.initiate(updatedMessage));
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      },
     }),
     editConversation: builder.mutation({
       query: ({ id, data, senderEmail }) => ({
@@ -26,6 +49,7 @@ export const conversationsApi = apiSlice.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
+      // silent update to message table
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
@@ -54,7 +78,7 @@ export const conversationsApi = apiSlice.injectEndpoints({
 
 export const {
   useConversationsQuery,
-  useGetConversationQuery,
   useAddConversationMutation,
   useEditConversationMutation,
+  useGetConversationQuery,
 } = conversationsApi;

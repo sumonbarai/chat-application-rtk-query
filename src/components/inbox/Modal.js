@@ -21,11 +21,11 @@ export default function Modal({ open, control }) {
   const { data: participant } = useGetUserQuery(to, {
     skip: !userCheck,
   });
+
   const [addConversation, { isSuccess: AddConversationSuccess }] =
     useAddConversationMutation();
   const [editConversation, { isSuccess: EditConversationSuccess }] =
     useEditConversationMutation();
-
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -35,33 +35,33 @@ export default function Modal({ open, control }) {
 
         if (inputEmailValid) {
           setUserChecked(true);
-          if (
-            participant?.length > 0 &&
-            participant[0].email !== loggedInUserEmail
-          ) {
-            const participantEmail = participant[0].email;
-
-            dispatch(
-              conversationsApi.endpoints.getConversation.initiate({
-                loggedInUserEmail: loggedInUserEmail,
-                partnerEmail: participantEmail,
-              })
-            )
-              .unwrap()
-              .then((data) => {
-                setConversation(data);
-              })
-              .catch((err) => {
-                console.log(err);
-              });
-          }
         }
       }
     }, 800);
     return () => {
       clearTimeout(timeOut);
     };
-  }, [to, participant, loggedInUserEmail, dispatch]);
+  }, [to]);
+
+  // search input email in conversation table is exist or not
+  useEffect(() => {
+    if (participant?.length > 0 && participant[0].email !== loggedInUserEmail) {
+      const participantEmail = participant[0].email;
+      dispatch(
+        conversationsApi.endpoints.getConversation.initiate({
+          loggedInUserEmail: loggedInUserEmail,
+          partnerEmail: participantEmail,
+        })
+      )
+        .unwrap()
+        .then((data) => {
+          setConversation(data);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    }
+  }, [dispatch, loggedInUserEmail, participant]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -93,7 +93,7 @@ export default function Modal({ open, control }) {
         message: message,
         timestamp: new Date().getTime(),
       };
-      addConversation(data);
+      addConversation({ data: data, senderEmail: loggedInUserEmail });
     }
   };
   useEffect(() => {
